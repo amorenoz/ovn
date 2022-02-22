@@ -1466,6 +1466,7 @@ execute_load(const struct ovnact_load *load,
     const struct ovnact_encode_params ep = {
         .lookup_port = ovntrace_lookup_port,
         .aux = dp,
+        .dp_key = dp->tunnel_key,
     };
     uint64_t stub[512 / 8];
     struct ofpbuf ofpacts = OFPBUF_STUB_INITIALIZER(stub);
@@ -3289,6 +3290,8 @@ trace_actions(const struct ovnact *ovnacts, size_t ovnacts_len,
         case OVNACT_CHK_ECMP_NH_MAC:
             break;
         case OVNACT_CHK_ECMP_NH:
+            break;
+        case OVNACT_SAMPLE:
             break;
         }
     }
