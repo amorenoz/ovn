@@ -2006,6 +2006,14 @@ pop(eth.type);
 push(abc);
     Syntax error at `abc' expecting field name.
 
+# sample
+sample(probability=100,collector_set=200,obs_domain=10,obs_point=1000);
+    encodes as sample(probability=100,collector_set_id=200,obs_domain_id=10,obs_point_id=1000)
+
+sample(probability=100,collector_set=200,obs_domain=10,obs_point=$cookie);
+    encodes as sample(probability=100,collector_set_id=200,obs_domain_id=10,obs_point_id=2863311530)
+
+
 # Miscellaneous negative tests.
 ;
     Syntax error at `;'.

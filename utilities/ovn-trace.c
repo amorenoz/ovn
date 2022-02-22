@@ -2890,6 +2890,9 @@ trace_actions(const struct ovnact *ovnacts, size_t ovnacts_len,
         case OVNACT_LOOKUP_FDB:
             execute_lookup_fdb(ovnact_get_LOOKUP_FDB(a), dp, uflow, super);
             break;
+
+        case OVNACT_SAMPLE:
+            break;
         }
     }
     ofpbuf_uninit(&stack);
