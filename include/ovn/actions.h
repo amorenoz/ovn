@@ -118,6 +118,7 @@ struct ovn_extend_table;
     OVNACT(LOOKUP_FDB,        ovnact_lookup_fdb)      \
     OVNACT(CHECK_IN_PORT_SEC,  ovnact_result)         \
     OVNACT(CHECK_OUT_PORT_SEC, ovnact_result)         \
+    OVNACT(SAMPLE,            ovnact_sample)          \
 
 /* enum ovnact_type, with a member OVNACT_<ENUM> for each action. */
 enum OVS_PACKED_ENUM ovnact_type {
@@ -453,6 +454,18 @@ struct ovnact_lookup_fdb {
     struct expr_field dst;     /* 1-bit destination field. */
 };
 
+/* OVNACT_SAMPLE */
+struct ovnact_sample {
+    struct ovnact ovnact;
+    uint16_t probability;       /* probability over UINT16_MAX. */
+    uint8_t obs_domain_id;      /* most significant byte of the
+                                   observation domain id. The other 24 bits
+                                   will come from the datapath's tunnel key. */
+    uint32_t collector_set_id;  /* colector_set_id. */
+    uint32_t obs_point_id;      /* observation point id. */
+    bool use_cookie;            /* use cookie as obs_point_id */
+};
+
 /* Internal use by the helpers below. */
 void ovnact_init(struct ovnact *, enum ovnact_type, size_t len);
 void *ovnact_put(struct ofpbuf *, enum ovnact_type, size_t len);
@@ -771,6 +784,9 @@ struct ovnact_encode_params {
 
     /* The logical flow uuid that drove this action. */
     struct uuid lflow_uuid;
+
+    /* The tunnel key of the datapath. */
+    uint32_t tunnel_key;
 
     /* OVN maps each logical flow table (ltable), one-to-one, onto a physical
      * OpenFlow flow table (ptable).  A number of parameters describe this
