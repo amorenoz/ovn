@@ -6200,6 +6200,8 @@ consider_acl(struct hmap *lflows, struct ovn_datapath *od,
             ds_clear(actions);
             build_acl_log(actions, acl, meter_groups);
             ds_put_cstr(actions, "next;");
+            // HACK: Sample
+            ds_put_format(actions, "sample(65535, 1);");
             ovn_lflow_add_with_hint(lflows, od, stage,
                                     acl->priority + OVN_ACL_PRI_OFFSET,
                                     acl->match, ds_cstr(actions),
@@ -6223,6 +6225,9 @@ consider_acl(struct hmap *lflows, struct ovn_datapath *od,
                           acl->match);
 
             ds_put_cstr(actions, REGBIT_CONNTRACK_COMMIT" = 1; ");
+            // HACK: Sample
+            ds_put_format(actions, "sample(65535, 1);");
+
             if (acl->label) {
                 ds_put_format(actions, REGBIT_ACL_LABEL" = 1; "
                               REG_LABEL" = %"PRId64"; ", acl->label);
@@ -6253,6 +6258,8 @@ consider_acl(struct hmap *lflows, struct ovn_datapath *od,
                               REG_LABEL" = %"PRId64"; ", acl->label);
             }
             build_acl_log(actions, acl, meter_groups);
+            // HACK: Sample
+            ds_put_format(actions, "sample(65535, 1);");
             ds_put_cstr(actions, "next;");
             ovn_lflow_add_with_hint(lflows, od, stage,
                                     acl->priority + OVN_ACL_PRI_OFFSET,
@@ -6271,6 +6278,8 @@ consider_acl(struct hmap *lflows, struct ovn_datapath *od,
             ds_clear(match);
             ds_clear(actions);
             ds_put_cstr(match, REGBIT_ACL_HINT_DROP " == 1");
+            // HACK: Sample drop
+            ds_put_format(actions, "sample(65535, 2);");
             if (!strcmp(acl->action, "reject")) {
                 build_reject_acl_rules(od, lflows, stage, acl, match,
                                        actions, &acl->header_, meter_groups);
@@ -6297,6 +6306,8 @@ consider_acl(struct hmap *lflows, struct ovn_datapath *od,
             ds_clear(match);
             ds_clear(actions);
             ds_put_cstr(match, REGBIT_ACL_HINT_BLOCK " == 1");
+            // HACK: Sample drop
+            ds_put_format(actions, "sample(65535, 2);");
             ds_put_cstr(actions, "ct_commit { ct_label.blocked = 1; }; ");
             if (!strcmp(acl->action, "reject")) {
                 build_reject_acl_rules(od, lflows, stage, acl, match,
@@ -6316,6 +6327,8 @@ consider_acl(struct hmap *lflows, struct ovn_datapath *od,
              * logical flow action in all cases. */
             ds_clear(match);
             ds_clear(actions);
+            // HACK: Sample drop
+            ds_put_format(actions, "sample(65535, 2);");
             if (!strcmp(acl->action, "reject")) {
                 build_reject_acl_rules(od, lflows, stage, acl, match,
                                        actions, &acl->header_, meter_groups);
