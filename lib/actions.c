@@ -4112,6 +4112,60 @@ ovnact_lookup_fdb_free(struct ovnact_lookup_fdb *get_fdb OVS_UNUSED)
 {
 }
 
+static void
+format_SAMPLE(const struct ovnact_sample *sample, struct ds *s)
+{
+    ds_put_format(s, "sample(%"PRId16", %"PRId32");",
+                  sample->probability, sample->collector_set_id);
+}
+
+static void
+encode_SAMPLE(const struct ovnact_sample *sample,
+              const struct ovnact_encode_params *ep OVS_UNUSED,
+              struct ofpbuf *ofpacts)
+{
+    struct ofpact_sample *os = ofpact_put_SAMPLE(ofpacts);
+    os->probability = sample->probability;
+    os->collector_set_id = sample->collector_set_id;
+}
+
+static void
+parse_sample(struct action_context *ctx)
+{
+    uint16_t probability = 0;
+    uint32_t collector_set_id = 0;
+
+    lexer_force_match(ctx->lexer, LEX_T_LPAREN); /* Skip '('. */
+    if (ctx->lexer->token.type == LEX_T_INTEGER
+        && ctx->lexer->token.format == LEX_F_DECIMAL) {
+        if (!action_parse_uint16(ctx, &probability, "probability")) {
+            return;
+        }
+    }
+    if (lexer_match(ctx->lexer, LEX_T_COMMA)) {  /* Skip ','. */
+        if (ctx->lexer->token.type == LEX_T_INTEGER
+            && ctx->lexer->token.format == LEX_F_DECIMAL) {
+            collector_set_id = ntohll(ctx->lexer->token.value.integer);
+        }
+        lexer_get(ctx->lexer);
+    }
+    lexer_force_match(ctx->lexer, LEX_T_RPAREN); /* Skip ')'. */
+
+    if (!probability) {
+        lexer_error(ctx->lexer, "Probability must be greater than zero");
+        return;
+    }
+
+    struct ovnact_sample * s = ovnact_put_SAMPLE(ctx->ovnacts);
+    s->probability = probability;
+    s->collector_set_id = collector_set_id;
+}
+
+static void
+ovnact_sample_free(struct ovnact_sample *sample OVS_UNUSED)
+{
+}
+
 /* Parses an assignment or exchange or put_dhcp_opts action. */
 static void
 parse_set_action(struct action_context *ctx)
@@ -4278,6 +4332,8 @@ parse_action(struct action_context *ctx)
         ovnact_put_CT_SNAT_TO_VIP(ctx->ovnacts);
     } else if (lexer_match_id(ctx->lexer, "put_fdb")) {
         parse_put_fdb(ctx, ovnact_put_PUT_FDB(ctx->ovnacts));
+    } else if (lexer_match_id(ctx->lexer, "sample")) {
+        parse_sample(ctx);
     } else {
         lexer_syntax_error(ctx->lexer, "expecting action");
     }

@@ -113,6 +113,7 @@ struct ovn_extend_table;
     OVNACT(PUT_FDB,           ovnact_put_fdb)         \
     OVNACT(GET_FDB,           ovnact_get_fdb)         \
     OVNACT(LOOKUP_FDB,        ovnact_lookup_fdb)      \
+    OVNACT(SAMPLE,            ovnact_sample)          \
 
 /* enum ovnact_type, with a member OVNACT_<ENUM> for each action. */
 enum OVS_PACKED_ENUM ovnact_type {
@@ -440,6 +441,13 @@ struct ovnact_lookup_fdb {
     struct expr_field mac;     /* 48-bit Ethernet address. */
     struct expr_field port;    /* Logical port name. */
     struct expr_field dst;     /* 1-bit destination field. */
+};
+
+/* OVNACT_SAMPLE */
+struct ovnact_sample {
+    struct ovnact ovnact;
+    uint16_t probability;       /* probability over UINT16_MAX. */
+    uint32_t collector_set_id;  /* colector_set_id. */
 };
 
 /* Internal use by the helpers below. */
