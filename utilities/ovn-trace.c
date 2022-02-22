@@ -3298,6 +3298,8 @@ trace_actions(const struct ovnact *ovnacts, size_t ovnacts_len,
             break;
         case OVNACT_CHK_ECMP_NH:
             break;
+        case OVNACT_SAMPLE:
+            break;
         }
     }
     ofpbuf_uninit(&stack);
