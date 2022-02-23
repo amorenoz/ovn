@@ -1956,7 +1956,7 @@ reg1[1] = lookup_fdb(ip4.src, eth.src);
 
 # sample
 sample(100, 200);
-    encodes as sample(probability=100,collector_set_id=200,obs_domain_id=0,obs_point_id=0,sampling_port=0)
+    encodes as sample(probability=100,collector_set_id=200,obs_domain_id=0,obs_point_id=0)
 
 # Miscellaneous negative tests.
 ;

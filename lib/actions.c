@@ -4127,6 +4127,7 @@ encode_SAMPLE(const struct ovnact_sample *sample,
     struct ofpact_sample *os = ofpact_put_SAMPLE(ofpacts);
     os->probability = sample->probability;
     os->collector_set_id = sample->collector_set_id;
+    os->sampling_port = OFPP_NONE;
 }
 
 static void
