@@ -4115,8 +4115,15 @@ ovnact_lookup_fdb_free(struct ovnact_lookup_fdb *get_fdb OVS_UNUSED)
 static void
 format_SAMPLE(const struct ovnact_sample *sample, struct ds *s)
 {
-    ds_put_format(s, "sample(%"PRId16", %"PRId32");",
-                  sample->probability, sample->collector_set_id);
+    ds_put_format(s, "sample(probability=%"PRId16, sample->probability);
+
+    if (sample->collector_set_id) {
+        ds_put_format(s, ",collector_set=%"PRId32, sample->collector_set_id);
+    }
+    if (sample->obs_point_id) {
+        ds_put_format(s, ",obs_point=%"PRId32, sample->obs_point_id);
+    }
+    ds_put_format(s, ");");
 }
 
 static void
@@ -4127,39 +4134,64 @@ encode_SAMPLE(const struct ovnact_sample *sample,
     struct ofpact_sample *os = ofpact_put_SAMPLE(ofpacts);
     os->probability = sample->probability;
     os->collector_set_id = sample->collector_set_id;
+    os->obs_point_id = sample->obs_point_id;
     os->sampling_port = OFPP_NONE;
 }
 
 static void
-parse_sample(struct action_context *ctx)
+parse_sample_arg(struct action_context *ctx, struct ovnact_sample *sample)
 {
-    uint16_t probability = 0;
-    uint32_t collector_set_id = 0;
-
-    lexer_force_match(ctx->lexer, LEX_T_LPAREN); /* Skip '('. */
-    if (ctx->lexer->token.type == LEX_T_INTEGER
-        && ctx->lexer->token.format == LEX_F_DECIMAL) {
-        if (!action_parse_uint16(ctx, &probability, "probability")) {
+    if (lexer_match_id(ctx->lexer, "probability")) {
+        if (!lexer_force_match(ctx->lexer, LEX_T_EQUALS)) {
             return;
         }
-    }
-    if (lexer_match(ctx->lexer, LEX_T_COMMA)) {  /* Skip ','. */
         if (ctx->lexer->token.type == LEX_T_INTEGER
             && ctx->lexer->token.format == LEX_F_DECIMAL) {
-            collector_set_id = ntohll(ctx->lexer->token.value.integer);
+            if (!action_parse_uint16(ctx, &sample->probability,
+                                     "probability")) {
+                return;
+            }
+        }
+    } else if (lexer_match_id(ctx->lexer, "obs_point")) {
+        if (!lexer_force_match(ctx->lexer, LEX_T_EQUALS)) {
+            return;
+        }
+        if (ctx->lexer->token.type == LEX_T_INTEGER
+            && ctx->lexer->token.format == LEX_F_DECIMAL) {
+            sample->obs_point_id = ntohll(ctx->lexer->token.value.integer);
         }
         lexer_get(ctx->lexer);
+    } else if (lexer_match_id(ctx->lexer, "collector_set")) {
+        if (!lexer_force_match(ctx->lexer, LEX_T_EQUALS)) {
+            return;
+        }
+        if (ctx->lexer->token.type == LEX_T_INTEGER
+            && ctx->lexer->token.format == LEX_F_DECIMAL) {
+            sample->collector_set_id = ntohll(ctx->lexer->token.value.integer);
+        }
+        lexer_get(ctx->lexer);
+    } else {
+        lexer_syntax_error(ctx->lexer, "Malformed sample action");
     }
-    lexer_force_match(ctx->lexer, LEX_T_RPAREN); /* Skip ')'. */
+}
+static void
+parse_sample(struct action_context *ctx)
+{
+    struct ovnact_sample * sample = ovnact_put_SAMPLE(ctx->ovnacts);
 
-    if (!probability) {
-        lexer_error(ctx->lexer, "Probability must be greater than zero");
+    if (lexer_match(ctx->lexer, LEX_T_LPAREN)) {
+        while (!lexer_match(ctx->lexer, LEX_T_RPAREN)) {
+            parse_sample_arg(ctx, sample);
+            if (ctx->lexer->error) {
+                return;
+            }
+            lexer_match(ctx->lexer, LEX_T_COMMA);
+        }
+    }
+    if (!sample->probability) {
+        lexer_error(ctx->lexer, "probability must be greater than zero");
         return;
     }
-
-    struct ovnact_sample * s = ovnact_put_SAMPLE(ctx->ovnacts);
-    s->probability = probability;
-    s->collector_set_id = collector_set_id;
 }
 
 static void

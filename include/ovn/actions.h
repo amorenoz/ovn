@@ -448,6 +448,7 @@ struct ovnact_sample {
     struct ovnact ovnact;
     uint16_t probability;       /* probability over UINT16_MAX. */
     uint32_t collector_set_id;  /* colector_set_id. */
+    uint32_t obs_point_id;      /* observation point id. */
 };
 
 /* Internal use by the helpers below. */
