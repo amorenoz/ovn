@@ -1,7 +1,7 @@
 {
     "name": "OVN_Northbound",
     "version": "6.0.0",
-    "cksum": "1994796624 31020",
+    "cksum": "410059621 31995",
     "tables": {
         "NB_Global": {
             "columns": {
@@ -30,6 +30,19 @@
                 "ipsec": {"type": "boolean"}},
             "maxRows": 1,
             "isRoot": true},
+        "Sample": {
+            "columns": {
+                "probability": {"type": {"key": {"type": "integer",
+                                                      "minInteger": 0,
+                                                      "maxInteger": 65535}}},
+                "collector_set_id": {"type": {"key": {"type": "integer",
+                                                      "minInteger": 0,
+                                                   "maxInteger": 4294967295}}},
+                "obs_point_id": {"type": {"key": {"type": "integer",
+                                                  "minInteger": 0,
+                                                  "maxInteger": 4294967295}}}
+            }
+        },
         "Copp": {
             "columns": {
                 "name": {"type": "string"},
@@ -267,6 +280,10 @@
                 "label": {"type": {"key": {"type": "integer",
                                            "minInteger": 0,
                                            "maxInteger": 4294967295}}},
+                "sample": {"type": {"key": {"type": "uuid",
+                                            "refTable": "Sample",
+                                            "refType": "strong"},
+                                    "min": 0, "max": 1}},
                 "external_ids": {
                     "type": {"key": "string", "value": "string",
                              "min": 0, "max": "unlimited"}}},
