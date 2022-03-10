@@ -6195,6 +6195,27 @@ build_acl_log(struct ds *actions, const struct nbrec_acl *acl,
 }
 
 static void
+build_acl_sample(struct ds *actions, const struct nbrec_acl *acl)
+{
+    if (!acl->sample) {
+        return;
+    }
+    ds_put_format(actions, "sample(probability=%"PRId16","
+                           "collector_set=%d,"
+                           "obs_domain=%hd,",
+                            (uint16_t) acl->sample->probability,
+                            (uint32_t) acl->sample->collector_set_id,
+                            (uint8_t) acl->sample->obs_domain_id);
+
+    if (acl->sample->obs_point_id) {
+        ds_put_format(actions, "obs_point=%"PRId32");",
+                      (uint32_t) *acl->sample->obs_point_id);
+    } else {
+        ds_put_cstr(actions, "obs_point=$cookie);");
+    }
+}
+
+static void
 build_reject_acl_rules(struct ovn_datapath *od, struct hmap *lflows,
                        enum ovn_stage stage, struct nbrec_acl *acl,
                        struct ds *extra_match, struct ds *extra_actions,
@@ -6260,6 +6281,7 @@ consider_acl(struct hmap *lflows, struct ovn_datapath *od,
     if (!strcmp(acl->action, "allow-stateless")) {
         ds_clear(actions);
         build_acl_log(actions, acl, meter_groups);
+        build_acl_sample(actions, acl);
         ds_put_cstr(actions, "next;");
         ovn_lflow_add_with_hint(lflows, od, stage,
                                 acl->priority + OVN_ACL_PRI_OFFSET,
@@ -6275,6 +6297,7 @@ consider_acl(struct hmap *lflows, struct ovn_datapath *od,
         if (!has_stateful) {
             ds_clear(actions);
             build_acl_log(actions, acl, meter_groups);
+            build_acl_sample(actions, acl);
             ds_put_cstr(actions, "next;");
             ovn_lflow_add_with_hint(lflows, od, stage,
                                     acl->priority + OVN_ACL_PRI_OFFSET,
@@ -6304,6 +6327,7 @@ consider_acl(struct hmap *lflows, struct ovn_datapath *od,
                               REG_LABEL" = %"PRId64"; ", acl->label);
             }
             build_acl_log(actions, acl, meter_groups);
+            build_acl_sample(actions, acl);
             ds_put_cstr(actions, "next;");
             ovn_lflow_add_with_hint(lflows, od, stage,
                                     acl->priority + OVN_ACL_PRI_OFFSET,
@@ -6329,6 +6353,7 @@ consider_acl(struct hmap *lflows, struct ovn_datapath *od,
                               REG_LABEL" = %"PRId64"; ", acl->label);
             }
             build_acl_log(actions, acl, meter_groups);
+            build_acl_sample(actions, acl);
             ds_put_cstr(actions, "next;");
             ovn_lflow_add_with_hint(lflows, od, stage,
                                     acl->priority + OVN_ACL_PRI_OFFSET,
@@ -6349,7 +6374,7 @@ consider_acl(struct hmap *lflows, struct ovn_datapath *od,
              */
             bool log_related = smap_get_bool(&acl->options, "log-related",
                                              false);
-            if (acl->log && acl->label && log_related) {
+            if ((acl->log || acl->sample) && acl->label && log_related) {
                 /* Related/reply flows need to be set on the opposite pipeline
                  * from where the ACL itself is set.
                  */
@@ -6365,6 +6390,7 @@ consider_acl(struct hmap *lflows, struct ovn_datapath *od,
                               use_ct_inv_match ? " && !ct.inv" : "",
                               ct_blocked_match, acl->label);
                 build_acl_log(actions, acl, meter_groups);
+                build_acl_sample(actions, acl);
                 ds_put_cstr(actions, "next;");
                 ovn_lflow_add_with_hint(lflows, od, log_related_stage,
                                         UINT16_MAX - 2,
@@ -6402,6 +6428,7 @@ consider_acl(struct hmap *lflows, struct ovn_datapath *od,
             } else {
                 ds_put_format(match, " && (%s)", acl->match);
                 build_acl_log(actions, acl, meter_groups);
+                build_acl_sample(actions, acl);
                 ds_put_cstr(actions, debug_implicit_drop_action());
                 ovn_lflow_add_with_hint(lflows, od, stage,
                                         acl->priority + OVN_ACL_PRI_OFFSET,
@@ -6430,6 +6457,7 @@ consider_acl(struct hmap *lflows, struct ovn_datapath *od,
             } else {
                 ds_put_format(match, " && (%s)", acl->match);
                 build_acl_log(actions, acl, meter_groups);
+                build_acl_sample(actions, acl);
                 ds_put_cstr(actions, debug_implicit_drop_action());
                 ovn_lflow_add_with_hint(lflows, od, stage,
                                         acl->priority + OVN_ACL_PRI_OFFSET,
@@ -6447,6 +6475,7 @@ consider_acl(struct hmap *lflows, struct ovn_datapath *od,
                                        actions, &acl->header_, meter_groups);
             } else {
                 build_acl_log(actions, acl, meter_groups);
+                build_acl_sample(actions, acl);
                 ds_put_cstr(actions, debug_implicit_drop_action());
                 ovn_lflow_add_with_hint(lflows, od, stage,
                                         acl->priority + OVN_ACL_PRI_OFFSET,

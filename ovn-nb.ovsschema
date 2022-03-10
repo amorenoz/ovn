@@ -1,7 +1,7 @@
 {
     "name": "OVN_Northbound",
     "version": "6.3.0",
-    "cksum": "4042813038 31869",
+    "cksum": "3795038812 33116",
     "tables": {
         "NB_Global": {
             "columns": {
@@ -30,6 +30,23 @@
                 "ipsec": {"type": "boolean"}},
             "maxRows": 1,
             "isRoot": true},
+        "Sample": {
+            "columns": {
+                "probability": {"type": {"key": {"type": "integer",
+                                                      "minInteger": 0,
+                                                      "maxInteger": 65535}}},
+                "collector_set_id": {"type": {"key": {"type": "integer",
+                                                      "minInteger": 0,
+                                                   "maxInteger": 4294967295}}},
+                "obs_domain_id": {"type": {"key": {"type": "integer",
+                                                   "minInteger": 0,
+                                                   "maxInteger": 255}}},
+                "obs_point_id": {"type": {"key": {"type": "integer",
+                                                  "minInteger": 0,
+                                                  "maxInteger": 4294967295},
+                                          "min": 0, "max":1}}
+            }
+        },
         "Copp": {
             "columns": {
                 "name": {"type": "string"},
@@ -267,6 +284,10 @@
                 "label": {"type": {"key": {"type": "integer",
                                            "minInteger": 0,
                                            "maxInteger": 4294967295}}},
+                "sample": {"type": {"key": {"type": "uuid",
+                                            "refTable": "Sample",
+                                            "refType": "strong"},
+                                    "min": 0, "max": 1}},
                 "options": {
                      "type": {"key": "string",
                               "value": "string",

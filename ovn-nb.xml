@@ -387,6 +387,31 @@
 
   </table>
 
+  <table name="Sample" title="Sample">
+    <p>
+      This table describes an IPFIX Sampling Point. Entries in other tables
+      might be associated with Sample entries to indicate how the sample
+      should be generated.
+
+      For an example, see <ref table="ACL"/>.
+    </p>
+    <column name="probability">
+      Sampling probability. It must be an integer number between 0 and 65535.
+    </column>
+    <column name="collector_set_id">
+      The 32-bit integer identifier of the set of of collectors to send
+      packets to. See Flow_Sample_Collector_Set Table in ovs-vswitchd's
+      database schema.
+    </column>
+    <column name="obs_domain_id">
+      The 8 most significant bits of the Observation Domain ID that will be
+      added to evvery IPFIX sample. The 24 LSB will be the datapath key.
+    </column>
+    <column name="obs_point_id">
+      If set, it'll be use as Observation Point ID in every IPFIX sample.
+      Otherwise the Logical Flow's coockie will be used.
+    </column>
+  </table>
   <table name="Copp" title="Control plane protection">
     <p>
       This table is used to define control plane protection policies, i.e.,
@@ -2190,6 +2215,12 @@
         </p>
       </column>
     </group>
+
+    <column name="sample">
+      <p>
+        The entry in the <ref table="Sample"/> table to use for sampling.
+      </p>
+    </column>
 
     <group title="Common Columns">
       <column name="options">
