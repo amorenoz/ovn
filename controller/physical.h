@@ -43,6 +43,12 @@ struct local_nonvif_data;
 #define OVN_GENEVE_TYPE 0x80     /* Critical option. */
 #define OVN_GENEVE_LEN 4
 
+struct physical_debug {
+    bool enabled;
+    uint32_t collector_set_id;
+    uint32_t obs_domain_id;
+};
+
 struct physical_ctx {
     struct ovsdb_idl_index *sbrec_port_binding_by_name;
     struct ovsdb_idl_index *sbrec_port_binding_by_datapath;
@@ -59,7 +65,7 @@ struct physical_ctx {
     struct shash *local_bindings;
     struct simap *patch_ofports;
     struct hmap *chassis_tunnels;
-    bool debug_drop;
+    struct physical_debug debug;
 };
 
 void physical_register_ovs_idl(struct ovsdb_idl *);

@@ -826,24 +826,43 @@ put_zones_ofpacts(const struct zone_ids *zone_ids, struct ofpbuf *ofpacts_p)
 }
 
 static void
+put_drop(const struct physical_debug *debug, uint8_t table_id,
+         struct ofpbuf *ofpacts)
+{
+    if (debug->collector_set_id) {
+        struct ofpact_sample *os = ofpact_put_SAMPLE(ofpacts);
+        os->probability = UINT16_MAX;
+        os->collector_set_id = debug->collector_set_id;
+        os->obs_domain_id = (debug->obs_domain_id << 24);
+        os->obs_point_id = table_id;
+    }
+}
+
+static void
 add_default_drop_flow(const struct physical_ctx *p_ctx,
                       uint8_t table_id,
                       struct ovn_desired_flow_table *flow_table)
 {
-    if (p_ctx->debug_drop) {
+    if (p_ctx->debug.enabled) {
         struct match match = MATCH_CATCHALL_INITIALIZER;
         struct ofpbuf ofpacts;
         ofpbuf_init(&ofpacts, 0);
+
+        put_drop(&p_ctx->debug, table_id, &ofpacts);
         ofctrl_add_flow(flow_table, table_id, 0, 0, &match,
                         &ofpacts, hc_uuid);
+
+        ofpbuf_uninit(&ofpacts);
     }
 }
+
 
 static void
 put_local_common_flows(uint32_t dp_key,
                        const struct sbrec_port_binding *pb,
                        const struct sbrec_port_binding *parent_pb,
                        const struct zone_ids *zone_ids,
+                       const struct physical_debug *debug,
                        struct ofpbuf *ofpacts_p,
                        struct ovn_desired_flow_table *flow_table)
 {
@@ -879,6 +898,7 @@ put_local_common_flows(uint32_t dp_key,
      * and the MLF_ALLOW_LOOPBACK flag is not set. */
     match_init_catchall(&match);
     ofpbuf_clear(ofpacts_p);
+    put_drop(debug, OFTABLE_CHECK_LOOPBACK, ofpacts_p);
     match_set_metadata(&match, htonll(dp_key));
     match_set_reg_masked(&match, MFF_LOG_FLAGS - MFF_REG0,
                          0, MLF_ALLOW_LOOPBACK);
@@ -1150,6 +1170,7 @@ consider_port_binding(struct ovsdb_idl_index *sbrec_port_binding_by_name,
                       const struct hmap *chassis_tunnels,
                       const struct sbrec_port_binding *binding,
                       const struct sbrec_chassis *chassis,
+                      const struct physical_debug *debug,
                       struct ovn_desired_flow_table *flow_table,
                       struct ofpbuf *ofpacts_p)
 {
@@ -1173,7 +1194,7 @@ consider_port_binding(struct ovsdb_idl_index *sbrec_port_binding_by_name,
 
         struct zone_ids binding_zones = get_zone_ids(binding, ct_zones);
         put_local_common_flows(dp_key, binding, NULL, &binding_zones,
-                               ofpacts_p, flow_table);
+                               debug, ofpacts_p, flow_table);
 
         ofpbuf_clear(ofpacts_p);
         match_outport_dp_and_port_keys(&match, dp_key, port_key);
@@ -1349,7 +1370,7 @@ consider_port_binding(struct ovsdb_idl_index *sbrec_port_binding_by_name,
         /* Pass the parent port binding if the port is a nested
          * container. */
         put_local_common_flows(dp_key, binding, parent_port, &zone_ids,
-                               ofpacts_p, flow_table);
+                               debug, ofpacts_p, flow_table);
 
         /* Table 0, Priority 150 and 100.
          * ==============================
@@ -1481,6 +1502,7 @@ consider_port_binding(struct ovsdb_idl_index *sbrec_port_binding_by_name,
 
             /* Drop LOCAL_ONLY traffic leaking through localnet ports. */
             ofpbuf_clear(ofpacts_p);
+            put_drop(debug, OFTABLE_CHECK_LOOPBACK, ofpacts_p);
             match_outport_dp_and_port_keys(&match, dp_key, port_key);
             match_set_reg_masked(&match, MFF_LOG_FLAGS - MFF_REG0,
                                  MLF_LOCAL_ONLY, MLF_LOCAL_ONLY);
@@ -1878,7 +1900,8 @@ physical_eval_port_binding(struct physical_ctx *p_ctx,
                           p_ctx->local_bindings,
                           p_ctx->patch_ofports,
                           p_ctx->chassis_tunnels,
-                          pb, p_ctx->chassis, flow_table, &ofpacts);
+                          pb, p_ctx->chassis, &p_ctx->debug,
+                          flow_table, &ofpacts);
     ofpbuf_uninit(&ofpacts);
 }
 
@@ -2001,7 +2024,8 @@ physical_run(struct physical_ctx *p_ctx,
                               p_ctx->local_bindings,
                               p_ctx->patch_ofports,
                               p_ctx->chassis_tunnels, binding,
-                              p_ctx->chassis, flow_table, &ofpacts);
+                              p_ctx->chassis, &p_ctx->debug,
+                              flow_table, &ofpacts);
     }
 
     /* Handle output to multicast groups, in tables 37 and 38. */

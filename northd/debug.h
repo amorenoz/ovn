@@ -19,13 +19,23 @@
 #include <stdbool.h>
 
 #include "lib/ovn-nb-idl.h"
+#include "openvswitch/dynamic-string.h"
 
 struct debug_config {
     bool enabled;
+    uint32_t collector_set_id;
+    uint32_t observation_domain_id;
+    struct ds drop_action;
 };
 
 void init_debug_config(const struct nbrec_nb_global *nb);
+void destroy_debug_config(void);
 
 bool debug_enabled(void);
+bool debug_sampling_enabled(void);
+
+const char *debug_drop_action(void);
+const char *debug_implicit_drop_action(void);
+const char *debug_reject_action(void);
 
 #endif /* NORTHD_DEBUG_H */
