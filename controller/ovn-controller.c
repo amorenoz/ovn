@@ -2942,7 +2942,7 @@ struct ed_type_pflow_output {
     /* Desired physical flows. */
     struct ovn_desired_flow_table flow_table;
     /* Drop debugging options. */
-    bool debug_drop;
+    struct physical_debug debug;
 };
 
 static void init_physical_ctx(struct engine_node *node,
@@ -3013,8 +3013,15 @@ static void init_physical_ctx(struct engine_node *node,
     p_ctx->local_bindings = &rt_data->lbinding_data.bindings;
     p_ctx->patch_ofports = &non_vif_data->patch_ofports;
     p_ctx->chassis_tunnels = &non_vif_data->chassis_tunnels;
-    p_ctx->debug_drop = smap_get_bool(&sb_global->options,
+    p_ctx->debug.enabled = smap_get_bool(&sb_global->options,
                                       "debug_drop_mode", false);
+    p_ctx->debug.collector_set_id = smap_get_uint(&sb_global->options,
+                                                  "debug_drop_collector_set",
+                                                  0);
+
+    p_ctx->debug.obs_domain_id = smap_get_uint(&sb_global->options,
+                                               "debug_drop_domain_id",
+                                               0);
 }
 
 static void *
@@ -3185,12 +3192,22 @@ pflow_output_sb_sb_global_handler(struct engine_node *node, void *data)
 
     struct ed_type_pflow_output *pfo = data;
 
-    bool debug_drop = smap_get_bool(&sb_global->options,
+    bool debug_enabled = smap_get_bool(&sb_global->options,
                                        "debug_drop_mode", false);
+    uint32_t collector_set_id = smap_get_uint(&sb_global->options,
+                                              "debug_drop_collector_set",
+                                              0);
+    uint32_t obs_domain_id = smap_get_uint(&sb_global->options,
+                                           "debug_drop_domain_id",
+                                           0);
 
-    if (pfo->debug_drop != debug_drop) {
+    if (pfo->debug.enabled != debug_enabled ||
+        pfo->debug.collector_set_id != collector_set_id ||
+        pfo->debug.obs_domain_id != obs_domain_id) {
         engine_set_node_state(node, EN_UPDATED);
-        pfo->debug_drop = debug_drop;
+        pfo->debug.enabled = debug_enabled;
+        pfo->debug.collector_set_id = collector_set_id;
+        pfo->debug.obs_domain_id = obs_domain_id;
     }
     return true;
 }
