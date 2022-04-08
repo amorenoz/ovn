@@ -1,6 +1,8 @@
 # ovn-northd
 bin_PROGRAMS += northd/ovn-northd
 northd_ovn_northd_SOURCES = \
+	northd/debug.c \
+	northd/debug.h \
 	northd/northd.c \
 	northd/northd.h \
 	northd/ovn-northd.c \
