@@ -15268,6 +15268,7 @@ northd_destroy(struct northd_data *data)
 
     destroy_datapaths_and_ports(&data->datapaths, &data->ports,
                                 &data->lr_list);
+    destroy_debug_config();
 }
 
 static void

@@ -263,6 +263,27 @@
         </p>
       </column>
 
+      <column name="options" key="debug_drop_domain_id">
+        <p>
+          If set to a 32-bit number and if
+          <code>debug_drop_collection_set</code> is also configured,
+          <code>ovn-northd</code> will add a <code>sample</code> action to
+          every logical flow that contains a 'drop' action.
+          IPFIX samples will have the specified value in the
+          observation_domain_id field.
+        </p>
+      </column>
+
+      <column name="options" key="debug_drop_collection_set">
+        <p>
+          If set to a 32-bit number <code>ovn-northd</code> will add a
+          <code>sample</code> action to every logical flow that contains a
+          'drop' action. The sample action will have the specified
+          collection_set_id. The value must match that of the local OVS
+          configuration as described in ovs-actions(7).
+        </p>
+      </column>
+
       <group title="Options for configuring interconnection route advertisement">
         <p>
           These options control how routes are advertised between OVN
