@@ -826,6 +826,20 @@ put_zones_ofpacts(const struct zone_ids *zone_ids, struct ofpbuf *ofpacts_p)
 }
 
 static void
+add_default_drop_flow(const struct physical_ctx *p_ctx,
+                      uint8_t table_id,
+                      struct ovn_desired_flow_table *flow_table)
+{
+    if (p_ctx->debug_drop) {
+        struct match match = MATCH_CATCHALL_INITIALIZER;
+        struct ofpbuf ofpacts;
+        ofpbuf_init(&ofpacts, 0);
+        ofctrl_add_flow(flow_table, table_id, 0, 0, &match,
+                        &ofpacts, hc_uuid);
+    }
+}
+
+static void
 put_local_common_flows(uint32_t dp_key,
                        const struct sbrec_port_binding *pb,
                        const struct sbrec_port_binding *parent_pb,
@@ -2106,6 +2120,13 @@ physical_run(struct physical_ctx *p_ctx,
         }
     }
 
+    /* Table 0, priority 0.
+     * ======================
+     *
+     * Drop packets tha do not match any tunnel in_port.
+     */
+    add_default_drop_flow(p_ctx, OFTABLE_PHY_TO_LOG, flow_table);
+
     /* Table 37, priority 150.
      * =======================
      *
@@ -2151,6 +2172,13 @@ physical_run(struct physical_ctx *p_ctx,
     ofctrl_add_flow(flow_table, OFTABLE_REMOTE_OUTPUT, 0, 0, &match,
                     &ofpacts, hc_uuid);
 
+    /* Table 38, priority 0.
+     * ======================
+     *
+     * Drop packets that do not match previous flows.
+     */
+    add_default_drop_flow(p_ctx, OFTABLE_LOCAL_OUTPUT, flow_table);
+
     /* Table 39, Priority 0.
      * =======================
      *
@@ -2177,5 +2205,25 @@ physical_run(struct physical_ctx *p_ctx,
     ofctrl_add_flow(flow_table, OFTABLE_SAVE_INPORT, 0, 0, &match,
                     &ofpacts, hc_uuid);
 
+    /* Table 65, priority 0.
+     * ======================
+     *
+     * Drop packets that do not match previous flows.
+     */
+    add_default_drop_flow(p_ctx, OFTABLE_LOG_TO_PHY, flow_table);
+
+    /* Table 68, priority 0.
+     * ======================
+     *
+     * Drop packets that do not match previous flows.
+     */
+    add_default_drop_flow(p_ctx, OFTABLE_CHK_LB_HAIRPIN, flow_table);
+
+    /* Table 70, priority 0.
+     * ======================
+     *
+     * Drop packets that do not match previous flows.
+     */
+    add_default_drop_flow(p_ctx, OFTABLE_CT_SNAT_HAIRPIN, flow_table);
     ofpbuf_uninit(&ofpacts);
 }
