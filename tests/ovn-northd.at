@@ -7643,3 +7643,79 @@ AT_CHECK([ovn-sbctl dump-flows ls0 | grep -e 'ls_in_\(put\|lookup\)_fdb' | sort 
 
 AT_CLEANUP
 ])
+
+OVN_FOR_EACH_NORTHD([
+AT_SETUP([Check drop-debug-mode])
+AT_KEYWORDS([debug drop])
+
+check_default_lflow() {
+    dps=$(ovn-sbctl --bare  --columns=_uuid list Datapath_Binding | xargs)
+    for dp in $dps; do
+        for pipeline in ingress egress; do
+            for table in $(ovn-sbctl --bare --columns=table_id find Logical_Flow logical_datapath="$dp" pipeline="$pipeline" | xargs | sort | uniq); do
+               echo "Checking if datapath $dp pipeline $pipeline table $table has a default action"
+               AT_CHECK([ovn-sbctl --columns=_uuid find Logical_Flow logical_datapath="$dp" pipeline="$pipeline" table_id=$table match="1" priority">="0 | wc -l | tr -d "\n\r" ], [0], [1], [ignore],
+               [echo "Datapath $dp pipeline $pipeline table $table does not have a default action"])
+            done
+        done
+    done
+}
+
+ovn_start
+
+check ovn-nbctl set NB_Global . options:debug_drop_mode="true"
+
+# Create LS + LR
+check ovn-nbctl --wait=sb \
+                -- lr-add R1 \
+                -- lrp-add R1 R1-S1 02:ac:10:01:00:01 172.16.1.1/24 \
+                -- ls-add S1 \
+                -- lsp-add S1 S1-R1 \
+                -- lsp-set-type S1-R1 router \
+                -- lsp-set-addresses S1-R1 02:ac:10:01:00:01 \
+                -- lsp-set-options S1-R1 router-port=R1-S1 \
+                -- lsp-add S1 p1 \
+                -- lsp-set-addresses p1 "02:ac:10:01:00:0a 172.16.1.100"
+
+check_default_lflow
+
+# Add stateless ACL
+check ovn-nbctl --wait=sb \
+                -- acl-add S1 from-lport 100 'inport=p1 && ip4' allow-stateless
+
+check_default_lflow
+
+check ovn-nbctl --wait=sb acl-del S1
+
+
+# Add stateful ACL
+check ovn-nbctl --wait=sb \
+                -- acl-add S1 from-lport 2 "udp" allow-related
+
+check_default_lflow
+
+check ovn-nbctl --wait=sb acl-del S1
+
+# Add LB
+check ovn-nbctl --wait=sb \
+    -- lb-add lb "10.0.0.1" "10.0.0.2" \
+    -- ls-lb-add S1 lb
+
+check_default_lflow
+
+# Check LB + stateless ACL
+check ovn-nbctl --wait=sb \
+                -- acl-add S1 from-lport 100 'inport=p1 && ip4' allow-stateless
+check_default_lflow
+
+check ovn-nbctl --wait=sb acl-del S1
+
+# Check LB + statelful ACL
+check ovn-nbctl --wait=sb \
+                -- acl-add S1 from-lport 2 "udp" allow-related
+
+check_default_lflow
+
+AT_CLEANUP
+])
+

@@ -263,6 +263,14 @@
         </p>
       </column>
 
+      <column name="options" key="debug_drop_mode">
+        <p>
+          If set to true, <code>ovn-northd</code> will add an explicit 'drop'
+          logical flow when possible instead of relying on the OVS implicitly
+          dropping packets that do not match any flow.
+        </p>
+      </column>
+
       <group title="Options for configuring interconnection route advertisement">
         <p>
           These options control how routes are advertised between OVN

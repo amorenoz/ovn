@@ -58,6 +58,7 @@ struct physical_ctx {
     struct shash *local_bindings;
     struct simap *patch_ofports;
     struct hmap *chassis_tunnels;
+    bool debug_drop;
 };
 
 void physical_register_ovs_idl(struct ovsdb_idl *);

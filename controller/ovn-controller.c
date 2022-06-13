@@ -2941,6 +2941,8 @@ lflow_output_sb_meter_handler(struct engine_node *node, void *data)
 struct ed_type_pflow_output {
     /* Desired physical flows. */
     struct ovn_desired_flow_table flow_table;
+    /* Drop debugging options. */
+    bool debug_drop;
 };
 
 static void init_physical_ctx(struct engine_node *node,
@@ -2985,6 +2987,12 @@ static void init_physical_ctx(struct engine_node *node,
         chassis = chassis_lookup_by_name(sbrec_chassis_by_name, chassis_id);
     }
 
+    struct sbrec_sb_global_table *sb_global_table =
+        (struct sbrec_sb_global_table *)EN_OVSDB_GET(
+            engine_get_input("SB_sb_global", node));
+    const struct sbrec_sb_global *sb_global =
+        sbrec_sb_global_table_first(sb_global_table);
+
     ovs_assert(br_int && chassis);
 
     struct ed_type_ct_zones *ct_zones_data =
@@ -3005,6 +3013,8 @@ static void init_physical_ctx(struct engine_node *node,
     p_ctx->local_bindings = &rt_data->lbinding_data.bindings;
     p_ctx->patch_ofports = &non_vif_data->patch_ofports;
     p_ctx->chassis_tunnels = &non_vif_data->chassis_tunnels;
+    p_ctx->debug_drop = smap_get_bool(&sb_global->options,
+                                      "debug_drop_mode", false);
 }
 
 static void *
@@ -3162,6 +3172,27 @@ pflow_output_ct_zones_handler(struct engine_node *node OVS_UNUSED,
      *     flows for the claimed lport.
      * */
     return !ct_zones_data->recomputed;
+}
+
+static bool
+pflow_output_sb_sb_global_handler(struct engine_node *node, void *data)
+{
+    struct sbrec_sb_global_table *sb_global_table =
+        (struct sbrec_sb_global_table *)EN_OVSDB_GET(
+            engine_get_input("SB_sb_global", node));
+    const struct sbrec_sb_global *sb_global =
+        sbrec_sb_global_table_first(sb_global_table);
+
+    struct ed_type_pflow_output *pfo = data;
+
+    bool debug_drop = smap_get_bool(&sb_global->options,
+                                       "debug_drop_mode", false);
+
+    if (pfo->debug_drop != debug_drop) {
+        engine_set_node_state(node, EN_UPDATED);
+        pfo->debug_drop = debug_drop;
+    }
+    return true;
 }
 
 static void *
@@ -3498,6 +3529,8 @@ main(int argc, char *argv[])
     engine_add_input(&en_pflow_output, &en_mff_ovn_geneve, NULL);
     engine_add_input(&en_pflow_output, &en_ovs_open_vswitch, NULL);
     engine_add_input(&en_pflow_output, &en_ovs_bridge, NULL);
+    engine_add_input(&en_pflow_output, &en_sb_sb_global,
+                     pflow_output_sb_sb_global_handler);
 
     engine_add_input(&en_northd_options, &en_sb_sb_global,
                      en_northd_options_sb_sb_global_handler);
