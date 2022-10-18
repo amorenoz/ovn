@@ -6208,7 +6208,7 @@ build_acl_sample(struct ds *actions, const struct nbrec_acl *acl)
                             (uint8_t) acl->sample->obs_domain_id);
 
     if (acl->sample->obs_point_id) {
-        ds_put_format(actions, "obs_point=%"PRId32");",
+        ds_put_format(actions, "obs_point=%"PRIu32");",
                       (uint32_t) *acl->sample->obs_point_id);
     } else {
         ds_put_cstr(actions, "obs_point=$cookie);");
